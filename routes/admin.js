@@ -46,4 +46,19 @@ router.post("/addCenter", async (req, res) => {
     res.status(500).json({ error: "server error" });
   }
 });
+
+router.delete("/deleteCenter/:id", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const center = await Center.findByIdAndDelete({ _id: id });
+    if (!center) {
+      return res.status(404).json({ message: "center not found" });
+    }
+    res.json({ message: "center deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;
