@@ -2,6 +2,7 @@ const express = require("express");
 const bcrypt = require("bcrypt");
 const User = require("../models/user.model");
 const Booking = require("../models/booking.model");
+const Centers = require("../models/center.model");
 const router = express.Router();
 
 router.post("/register", async (req, res) => {
@@ -58,7 +59,6 @@ router.post("/book", async (req, res) => {
       userId,
     });
     await booking.save();
-
     res.status(201).json({ message: "booking registered" });
   } catch (err) {
     console.log(err);
@@ -66,15 +66,82 @@ router.post("/book", async (req, res) => {
   }
 });
 
-router.get("/filter", async (req, res) => {
-  const { date, location } = req.body;
+router.post("/myBookings", async (req, res) => {
+  const { userId } = req.body;
+  try {
+    const result = await Booking.find({ userId: userId }).exec();
 
-  Booking.find({ date: date }, (err, bookings) => {
-    if (err) {
-      return res.status(500).json({ error: "server error" });
-    }
-    return res.json(bookings);
-  });
+    res.json(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+router.post("/filter", async (req, res) => {
+  const { date, location } = req.body;
+  let availableSlotMap = new Map();
+  try {
+    const centers = await Centers.find().exec();
+    const centersId = centers.map(function (center) {
+      return center.id;
+    });
+    centersId.forEach((element) => {
+      availableSlotMap.set(element, 10);
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Internal server error" });
+  }
+
+  try {
+    const result = await Booking.find({ date: date }).exec();
+    const centerIds = result.map((centerId) => {
+      return centerId.centerId.toString();
+    });
+    await centerIds.forEach((centerId) => {
+      if (availableSlotMap.has(centerId)) {
+        let availableSlots = availableSlotMap.get(centerId);
+        console.log(availableSlots, centerId);
+        availableSlotMap.set(centerId, availableSlots - 1);
+      }
+    });
+    let mapObject = Object.fromEntries(availableSlotMap);
+    res.json(mapObject);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+router.get("/centers", async (req, res) => {
+  try {
+    const centers = await Centers.find({});
+    return res.status(201).json(centers);
+  } catch (err) {
+    res.status(500).json({ error: "server error" });
+  }
+});
+
+router.post("/centers/slots", async (req, res) => {
+  try {
+    const { date, centerId } = req.body;
+    Booking.find(
+      {
+        date: date,
+        centerId: centerId,
+      },
+      function (err, bookings) {
+        if (err) throw err;
+        const bookingArray = bookings.map(function (booking) {
+          return booking.slot;
+        });
+        res.json(bookingArray);
+      }
+    );
+  } catch (err) {
+    return res.status(500).json({ error: "server eror" });
+  }
 });
 
 module.exports = router;
