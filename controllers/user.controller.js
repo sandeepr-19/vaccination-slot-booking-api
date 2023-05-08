@@ -37,7 +37,7 @@ exports.signInUser = async (req, res) => {
     const user = await User.findOne({ email });
 
     if (!user) {
-      return res.status(401).json({ error: "Invalid email or password" });
+      return res.status(401).json({ error: "Not a user" });
     }
 
     /** compares the user given password and the hashed password that is saved the db */
