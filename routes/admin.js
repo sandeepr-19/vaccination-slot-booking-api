@@ -13,4 +13,10 @@ router.delete(
   adminController.removeCenter
 );
 
+router.post(
+  "/getDosageDetails",
+  jwtAuth.authenticateToken,
+  adminController.getDosageDetails
+);
+
 module.exports = router;
